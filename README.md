@@ -1,1 +1,1 @@
-# sample-app-dockerization
+# AI_DEVOPS_AUTOMATION
