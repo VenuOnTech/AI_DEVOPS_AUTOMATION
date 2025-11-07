@@ -26,7 +26,7 @@ Tested Locally: The script was tested and successfully generates the correct `Do
 
 ## 3. How to Use (for Testing)
 
-Make sure you are on this branch: git checkout feat/dockerfile-generator
+Make sure you are on this branch: git checkout dockerfile-generator  
 
 Ensure you have Python 3 installed.
 
