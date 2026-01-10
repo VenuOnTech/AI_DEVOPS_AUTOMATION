@@ -1,53 +1,28 @@
-name: Build and Push Docker Image
+name: Build & Push Docker Image
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - "Dockerfile"
-      - "package.json"
-      - "package-lock.json"
-      - "index.js"
-      - ".github/workflows/**"
+    branches: ["main"]
 
 jobs:
-  docker-build:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Confirm workflow trigger
-      - name: Confirm workflow trigger
-        run: echo "GitHub Actions workflow triggered successfully"
-
-      # Step 3: Login to Docker Hub
-      - name: Login to Docker Hub
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      - name: CI Build Validation
         run: |
-          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+          echo "CI pipeline is working"
+          echo "Repository contents:"
+          ls -la
 
-      # Step 4: Build Docker image
-      - name: Build Docker Image
-        run: docker build -t chetanasivadurga/ai-devops:${{ github.run_number }} .
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      # Step 5: Tag Docker image as latest
-      - name: Tag Docker Image as latest
-        run: docker tag chetanasivadurga/ai-devops:${{ github.run_number }} chetanasivadurga/ai-devops:latest
-
-      # Step 6: Push Docker image with version
-      - name: Push Docker Image (versioned)
-        run: docker push chetanasivadurga/ai-devops:${{ github.run_number }}
-
-      # Step 7: Push Docker image as latest
-      - name: Push Docker Image (latest)
-        run: docker push chetanasivadurga/ai-devops:latest
-
-
-
+      - name: Push Docker Image
+        run: |
+          docker push chetanasivadurga/ai-devops:${{ github.run_number }}
+          docker push chetanasivadurga/ai-devops:latest
 
