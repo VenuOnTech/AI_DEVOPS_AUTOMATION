@@ -5,12 +5,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const APP_VERSION = process.env.APP_VERSION || "local";
 
-// Home route
+// Home route – deployment visibility
 app.get("/", (req, res) => {
   res.send(`
     <h1>Hello from AI DevOps - Version 2 - Auto Deployment Test</h1>
-    <p>Version: ${APP_VERSION}</p>
-    <p>Status: Role B Ready</p>
+    <hr/>
+    <p><b>Version:</b> ${APP_VERSION}</p>
+    <p><b>Environment:</b> ${APP_VERSION}</p>
+    <p><b>Deployed At:</b> ${new Date().toISOString()}</p>
+    <p><b>Status:</b> Role B Completed ✅</p>
   `);
 });
 
@@ -25,5 +28,5 @@ app.get("/health", (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
