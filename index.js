@@ -8,12 +8,12 @@ const APP_VERSION = process.env.APP_VERSION || "local";
 // Home route – deployment visibility
 app.get("/", (req, res) => {
   res.send(`
-    <h1>Hello from AI DevOps - Version 2 - Auto Deployment Test</h1>
+    <h1>Hello from AI DevOps - Version 3 - Auto Deployment Test</h1>
     <hr/>
     <p><b>Version:</b> ${APP_VERSION}</p>
     <p><b>Environment:</b> ${APP_VERSION}</p>
     <p><b>Deployed At:</b> ${new Date().toISOString()}</p>
-    <p><b>Status:</b> Role A Completed Version 3✅</p>
+    <p><b>Status:</b> Role A Completed Version 3 ✅</p>
   `);
 });
 
@@ -28,5 +28,5 @@ app.get("/health", (req, res) => {
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(🚀 Server running on port ${PORT});
+  console.log(`🚀 Server running on port ${PORT}`);
 });
