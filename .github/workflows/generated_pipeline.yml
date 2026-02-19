@@ -1,4 +1,4 @@
-name: Build & Push to ACR (AI Assisted)
+name: AI DevOps CI/CD Pipeline
 
 on:
   push:
@@ -6,36 +6,80 @@ on:
       - main
 
 jobs:
-  build:
+  build-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout Code
-      - uses: actions/checkout@v3
-
-      # 2️⃣ Set up Python (for AI step)
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      # 1️⃣ Checkout Repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
-          python-version: '3.11'
+          fetch-depth: 2
 
-      # 3️⃣ AI Risk Evaluation
-      - name: Calculate Deployment Risk
-        id: riskcheck
+      # 2️⃣ Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # 3️⃣ Install AI Dependencies
+      - name: Install AI Requirements
         run: |
-          CHANGED_LINES=$(git diff --shortstat HEAD~1 | awk '{print $4}')
-     CHANGED_LINES=${CHANGED_LINES:-0}
-          echo "Lines changed: ${CHANGED_LINES:-0}"
+          pip install --upgrade pip
+          pip install -r ai/requirements.txt
 
-          RISK=$(python ai/risk_model.py ${CHANGED_LINES:-0})
-          echo "Risk score: $RISK"
-
-          if (( $(echo "$RISK > 0.7" | bc -l) )); then
-            echo "High risk deployment. Stopping pipeline."
-            exit 1
+      # 4️⃣ Calculate Git Change Metrics
+      - name: Extract Deployment Features
+        id: metrics
+        run: |
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            LINES_CHANGED=$(git diff --shortstat HEAD~1 | awk '{print $4}')
+            FILES_CHANGED=$(git diff --name-only HEAD~1 | wc -l)
+          else
+            LINES_CHANGED=0
+            FILES_CHANGED=0
           fi
 
-      # 4️⃣ Login to Azure Container Registry
+          COMMIT_MESSAGE_LENGTH=$(git log -1 --pretty=%B | wc -m)
+
+          if [ "$LINES_CHANGED" -eq 0 ]; then
+            CHURN_RATE=0
+          else
+            CHURN_RATE=$(echo "$FILES_CHANGED $LINES_CHANGED" | awk '{print $1/$2}')
+          fi
+
+          echo "LINES_CHANGED=$LINES_CHANGED" >> $GITHUB_ENV
+          echo "FILES_CHANGED=$FILES_CHANGED" >> $GITHUB_ENV
+          echo "COMMIT_MESSAGE_LENGTH=$COMMIT_MESSAGE_LENGTH" >> $GITHUB_ENV
+          echo "CHURN_RATE=$CHURN_RATE" >> $GITHUB_ENV
+
+      # 5️⃣ AI Risk Evaluation
+      - name: AI Risk Prediction
+        id: riskcheck
+        run: |
+          RISK=$(python ai/risk_model.py \
+            $LINES_CHANGED \
+            $FILES_CHANGED \
+            $COMMIT_MESSAGE_LENGTH \
+            $CHURN_RATE)
+
+          echo "Predicted Risk: $RISK"
+          echo "RISK_SCORE=$RISK" >> $GITHUB_ENV
+
+          python - <<EOF
+import sys
+risk=float("$RISK")
+if risk > 0.7:
+    print("High risk deployment. Stopping pipeline.")
+    sys.exit(1)
+EOF
+
+      # 6️⃣ Train Model (if enough data)
+      - name: Train ML Model
+        run: |
+          python ai/train_model.py
+
+      # 7️⃣ Login to Azure Container Registry
       - name: Login to ACR
         uses: docker/login-action@v3
         with:
@@ -43,26 +87,26 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      # 5️⃣ Build Docker Image
-      - name: Build Image
+      # 8️⃣ Build Docker Image
+      - name: Build Docker Image
         run: |
           docker build -t venudadiprojectacr001.azurecr.io/ai-devops:${{ github.run_number }} .
           docker tag venudadiprojectacr001.azurecr.io/ai-devops:${{ github.run_number }} venudadiprojectacr001.azurecr.io/ai-devops:latest
 
-      # 6️⃣ Push Image to ACR
-      - name: Push Image
+      # 9️⃣ Push Docker Image
+      - name: Push Docker Image
         run: |
           docker push venudadiprojectacr001.azurecr.io/ai-devops:${{ github.run_number }}
           docker push venudadiprojectacr001.azurecr.io/ai-devops:latest
 
-      # 7️⃣ Login to Azure
+      # 🔟 Azure Login
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # 8️⃣ Update Web App Container
-      - name: Update Web App Container
+      # 1️⃣1️⃣ Update Web App Container
+      - name: Update Azure Web App
         run: |
           az webapp config container set \
             --name tf-ai-devops-app \
@@ -70,9 +114,33 @@ jobs:
             --docker-custom-image-name venudadiprojectacr001.azurecr.io/ai-devops:latest \
             --docker-registry-server-url https://venudadiprojectacr001.azurecr.io
 
-      # 9️⃣ Restart Azure Web App
-      - name: Restart Azure Web App
+      # 1️⃣2️⃣ Restart Web App
+      - name: Restart Web App
         run: |
           az webapp restart \
             --name tf-ai-devops-app \
             --resource-group ai-devops-rg
+
+      # 1️⃣3️⃣ Log Deployment Result
+      - name: Log Deployment Outcome
+        run: |
+          python - <<EOF
+from ai.deployment_logger import log_deployment
+log_deployment(
+    int("$LINES_CHANGED"),
+    int("$FILES_CHANGED"),
+    int("$COMMIT_MESSAGE_LENGTH"),
+    float("$CHURN_RATE"),
+    0
+)
+EOF
+
+      # 1️⃣4️⃣ Commit Updated Dataset
+      - name: Commit Updated Dataset
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add ai/deployment_history.csv || true
+          git add ai/deployment_model.pkl || true
+          git commit -m "Auto-update deployment dataset" || echo "No changes to commit"
+          git push
