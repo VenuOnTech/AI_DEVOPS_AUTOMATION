@@ -41,6 +41,11 @@ features = np.array([[
     previous_failure_rate
 ]])
 
-probability = model.predict_proba(features)[0][1]
+proba = model.predict_proba(features)
+
+if proba.shape[1] == 1:
+    probability = 0.0
+else:
+    probability = proba[0][1]
 
 print(round(float(probability), 4))
