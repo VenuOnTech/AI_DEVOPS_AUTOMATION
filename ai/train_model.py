@@ -34,8 +34,12 @@ if len(data) < 5:
     model = RandomForestClassifier(n_estimators=10)
 
     # 6 feature dummy input
-    X_dummy = [[0, 0, 0, 0, 0.0, 0.0]]
-    y_dummy = [0]
+    X_dummy = [
+    [0, 0, 0, 0, 0.0, 0.0],
+    [1, 1, 1, 1, 1.0, 1.0]
+    ]
+
+    y_dummy = [0, 1]
 
     model.fit(X_dummy, y_dummy)
     joblib.dump(model, MODEL_PATH)
