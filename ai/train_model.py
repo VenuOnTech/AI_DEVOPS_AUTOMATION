@@ -6,18 +6,21 @@ import os
 DATA_PATH = "ai/deployment_history.csv"
 MODEL_PATH = "ai/deployment_model.pkl"
 
+FEATURE_COLUMNS = [
+    "lines_changed",
+    "files_changed",
+    "commit_message_length",
+    "commit_hour",
+    "churn_rate",
+    "previous_failure_rate"
+]
+
 # ---------------------------------------------------
 # 1️⃣ Ensure Dataset Exists (Auto-create if missing)
 # ---------------------------------------------------
 if not os.path.exists(DATA_PATH):
     print("Dataset not found. Creating new dataset.")
-    df = pd.DataFrame(columns=[
-        "lines_changed",
-        "files_changed",
-        "commit_message_length",
-        "churn_rate",
-        "failed"
-    ])
+    df = pd.DataFrame(columns=FEATURE_COLUMNS + ["failed"])
     df.to_csv(DATA_PATH, index=False)
 
 data = pd.read_csv(DATA_PATH)
@@ -30,8 +33,8 @@ if len(data) < 5:
 
     model = RandomForestClassifier(n_estimators=10)
 
-    # Minimal synthetic training data
-    X_dummy = [[0, 0, 0, 0]]
+    # 6 feature dummy input
+    X_dummy = [[0, 0, 0, 0, 0.0, 0.0]]
     y_dummy = [0]
 
     model.fit(X_dummy, y_dummy)
@@ -43,7 +46,7 @@ if len(data) < 5:
 # ---------------------------------------------------
 # 3️⃣ Normal Training
 # ---------------------------------------------------
-X = data.drop("failed", axis=1)
+X = data[FEATURE_COLUMNS]
 y = data["failed"]
 
 model = RandomForestClassifier(n_estimators=100)
