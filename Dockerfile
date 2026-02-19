@@ -2,7 +2,7 @@
 FROM node:20-alpine AS frontend-build
 
 WORKDIR /app
-
+#edited
 # Copy entire repo
 COPY . .
 
@@ -45,3 +45,4 @@ CMD if [ -f "my-app/server/index.js" ]; then \
     else \
       echo "No valid entry point found." && exit 1 ; \
     fi
+
