@@ -4,9 +4,6 @@ WORKDIR /app
 
 COPY . .
 
-# Install root deps (if any)
-RUN npm install
-
 # Install & build frontend
 RUN cd my-app/client && npm install && npm run build
 
